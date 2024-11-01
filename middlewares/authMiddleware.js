@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 
 //middle ware for checking the user authenticaton
-export const userAuth = (req, res) => {
+export const userAuth = (req, res,next) => {
   console.log("inside user authenticate");
   //checking the access token , decoding user, success case pass to controller else error
 
@@ -22,6 +22,7 @@ export const userAuth = (req, res) => {
     }
 
     jwt.verify(token, process.env.JWT_SECRET_ACCESS, async (err, decoded) => {
+      console.log(decoded,"decoded thing from token")
       if (err) {
         return res.status(403).json({ message: "Forbidden token expired" });
       } else if (decoded.role !== "user") {

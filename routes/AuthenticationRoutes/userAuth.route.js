@@ -1,5 +1,5 @@
 import express from 'express'
-import { getUser, googleAuth, handleLogout, handleMakeAccessToken, handleResendOtp, handleUserLogin, handleUserSignup, handleVerifySignup } from '../../controllers/User/userAuth.controller.js'
+import { getUser, googleAuth, handleForgotPassword, handleLogout, handleMakeAccessToken, handleResendOtp, handleUserLogin, handleUserSignup, handleVerifySignup } from '../../controllers/User/userAuth.controller.js'
 import { loginValidationRules,validate } from '../../middlewares/validationMiddleware.js'
 
 const router = express.Router()
@@ -12,6 +12,7 @@ router.post('/resend-otp',handleResendOtp)
 router.post('/googleAuth', googleAuth)
 router.get('/access',handleMakeAccessToken)
 router.post('/logout',handleLogout)
+router.post("/forgotPassword",handleForgotPassword)
 
 
 

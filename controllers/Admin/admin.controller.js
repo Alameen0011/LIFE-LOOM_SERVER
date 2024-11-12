@@ -1,7 +1,7 @@
 import Product from "../../models/product.model.js";
 import User from "../../models/user.model.js"
 
-export const handleUpdateUserStatus = async(req,res) => {
+export const handleUpdateUserStatus = async(req,res,next) => {
     try {
         const {userId} = req.body;
 
@@ -35,7 +35,7 @@ export const handleUpdateUserStatus = async(req,res) => {
         
     } catch (error) {
         console.log('ERROR WHILE UPDATING USER STATUS')
-        res.status(500).json({message:"error while updating user status"})        
+        next(error)      
     }
 }
 

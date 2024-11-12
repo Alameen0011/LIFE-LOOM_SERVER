@@ -63,6 +63,7 @@ const productSchema = new mongoose.Schema({
     unique: true,
   },
   deleted: { type: Boolean, default: false }, 
+  maxPerUser: { type: Number, default: 5 },
   status: {
     type: Boolean,
     default: true, // True means active, false means inactive

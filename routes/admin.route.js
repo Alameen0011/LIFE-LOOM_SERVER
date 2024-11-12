@@ -3,6 +3,7 @@ import { handleaddCategory, handleFetchCategories, handleSoftDeleteCategory, han
 import { handleUpdateUserStatus } from '../controllers/Admin/admin.controller.js';
 import { handleAddProduct, handleFetchAllProducts, handleFetchSingleProduct, handleSoftDeleteProduct, handleUpdateProduct } from '../controllers/Admin/product.controller.js';
 import { adminAuth } from '../middlewares/authMiddleware.js';
+import { handleAdminCancelOrder, handleCancelOrders, handleFetchAllOrders, handleGetSingleOrderAdmin, handleOrderStatusChange } from '../controllers/Admin/order.controller.js';
 
 const router = express.Router()
 
@@ -24,6 +25,13 @@ router.get('/products',handleFetchAllProducts)
 router.delete('/products/:id/delete',handleSoftDeleteProduct)
 router.get('/products/:id/edit',handleFetchSingleProduct)
 router.put('/updateProduct/:id',handleUpdateProduct)
+
+
+router.get("/order/fetchOrder",handleFetchAllOrders)
+router.patch("/order/:orderId/cancelOrder",handleAdminCancelOrder)
+router.patch("/order/status/:orderId",handleOrderStatusChange)
+router.get('/order/getSingleOrder/:id',handleGetSingleOrderAdmin)
+router.patch('/order/:orderId/item/:itemId/cancelOrder',handleCancelOrders)
 
 
 

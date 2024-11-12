@@ -66,14 +66,18 @@ export const handleUserSignup = asyncHandler(async (req, res, next) => {
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return res.status(400).json({ message: "Invalid email format" });
+    return res.status(400).json({
+      success: false,
+      message: "Invalid email format",
+    });
   }
 
   // Validate password strength (min 6 characters)
   if (password.length < 6) {
-    return res
-      .status(400)
-      .json({ message: "Password must be at least 6 characters long" });
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 6 characters long",
+    });
   }
 
   // Validate phone number (basic numeric check)
@@ -122,6 +126,7 @@ export const handleUserSignup = asyncHandler(async (req, res, next) => {
     });
   } catch (error) {
     console.log(error, "ERROR IN USER SIGNUP");
+    console.log(error.name, ": error Name", error.message, ":error message");
     next(error);
   }
 });
@@ -170,7 +175,7 @@ export const handleUserLogin = asyncHandler(async (req, res) => {
 });
 
 //handling resent otp
-export const handleResendOtp = asyncHandler(async (req, res) => {
+export const handleResendOtp = asyncHandler(async (req, res,next) => {
   try {
     const { email } = req.body;
 
@@ -189,7 +194,7 @@ export const handleResendOtp = asyncHandler(async (req, res) => {
     if (!user) {
       return res
         .status(404)
-        .json({ message: "User with this email does not exist." });
+        .json({ message: "dude you have to make this fast" });
     }
 
     //generate otp
@@ -212,13 +217,11 @@ export const handleResendOtp = asyncHandler(async (req, res) => {
     res.status(200).json({ message: "OTP has been resent successfully." });
   } catch (error) {
     console.error("Error in resendOtpController:", error);
-    return res
-      .status(500)
-      .json({
-        message: "An error occurred while resending the OTP. Please try again.",
-      });
+    next(error)
   }
 });
+
+//--- access Token making api -------------//
 
 export const handleMakeAccessToken = asyncHandler(async (req, res) => {
   try {
@@ -234,7 +237,10 @@ export const handleMakeAccessToken = asyncHandler(async (req, res) => {
     }
 
     // Verify the refresh token
-    const decoded = jwt.verify(refreshTokenFromCookie,process.env.JWT_SECRET_REFRESH);
+    const decoded = jwt.verify(
+      refreshTokenFromCookie,
+      process.env.JWT_SECRET_REFRESH
+    );
 
     console.log(decoded);
     // Find user or admin based on the decoded token role
@@ -251,9 +257,14 @@ export const handleMakeAccessToken = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    const newAccessToken = generateAccessToken(user._id,decoded.role);
+    const newAccessToken = generateAccessToken(user._id, decoded.role);
 
-    return res.status(200).json({ accessToken: newAccessToken, username:user.email ,role:decoded.role,user});
+    return res.status(200).json({
+      accessToken: newAccessToken,
+      username: user.email,
+      role: decoded.role,
+      user,
+    });
   } catch (error) {
     console.error("Error verifying refresh token:", error);
     return res.status(401).json({ message: "Refresh token is invalid." });
@@ -319,7 +330,7 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
     }
 
     //generate refreshToken
-    const userRefreshToken = await generateRefreshToken(id);
+    const userRefreshToken =  generateRefreshToken(id);
     //generate accessToken
     res.cookie("refreshToken", userRefreshToken, {
       httpOnly: true,
@@ -367,107 +378,159 @@ export const getUser = async (req, res) => {
   }
 };
 
-//NExt- week
 
-// export const handleSendOtp = asyncHandler(async (req,res) => {
-//   //user will enter email and onclick we send api with data - email
-//   const {email} = req.body
+//---------------Forgot password play with user model -----------------//
 
-//   //check if user exist!
-//   const user = await User.findOne({email})
+export const handleForgotPassword = async(req,res,next) => {
 
-//   if(!user){
-//     return res.status(404).json({success:false,  message:"user not found"})
-//   }
+    const {email} = req.body
 
-//   //generate otp
-//   const otp = crypto.randomInt(100000, 999999).toString(); // Generate a 6-digit OTP
 
-//   //put the otp in userDocument - with this we have to verify that the user entered is same as userotp
-//   user.otp = otp
-//   user.otpExpiry = Date.now() + 5 * 60 * 1000; // OTP valid for 5 minutes
+    try {
+ 
+  
+      console.log(email);
+  
+      // Check if the email is provided
+      if (!email) {
+        return res
+          .status(400)
+          .json({ message: "Email is required to resend OTP." });
+      }
+  
+      // Find the user by email
+      const user = await User.findOne({ email });
+  
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "There is no user found in this particular email" });
+      }
+  
+      //generate otp
+      const otp = crypto.randomInt(100000, 999999).toString(); // Generate a 6-digit OTP
+      const otpExpiry = Date.now() + 5 * 60 * 1000; // OTP expires in 5 minutes
+  
+      // Update the user's OTP and expiry time in the database
+      user.otp = otp;
+      user.otpExpiry = otpExpiry;
+      await user.save();
+  
+      const mailOptions = {
+        from: process.env.EMAIL_APP,
+        to: user.email,
+        subject: "Leaf and Loom  Resend  OTP",
+        text: `Hello ${user.firstName},your otp for signup on Leaf and Loom is ${otp}. This otp is valid for 15 minutes `,
+      };
+  
+      await transporter.sendMail(mailOptions);
+      res.status(200).json({
+        success:true,
+        email,
+        message: "OTP has been send to you email." });
+    } catch (error) {
+      console.error("Error in Forgotpassword controller:", error);
+      next(error)
+    }
+}
 
-//   await user.save()
 
-//   const mailOptions = {
-//     from:process.env.EMAIL_APP,
-//     to:user.email,
-//     subject:'Leaf and Loom OTP',
-//     text:`Hello ${user.firstName},your otp for signup on Leaf and Loom is ${otp}. This otp is valid for 15 minutes `
-//   };
+export const handleVerifyOtp = asyncHandler(async (req, res,next ) => {
+  try {
+      // Extracting OTP from the request body
+      const { otp } = req.body;
 
-// try {
+      // Find the user by OTP
+      const user = await User.findOne({ otp });
 
-//   await transporter.sendMail(mailOptions);
-//     res.status(200).json({success:true, message: 'OTP sent to your email address' });
+      // If the user with the provided OTP doesn't exist, return a 404 error
+      if (!user) {
+          return res.status(404).json({ message: 'Invalid OTP or expired' });
+      }
 
-// } catch (error) {
-//   console.log('error in sendimg mail')
-//   res.status(500).json({ message: 'Error sending OTP, please try again later.' });
+      // Check if the OTP is expired
+      if (Date.now() > user.otpExpiry) {
+          return res.status(400).json({ message: 'OTP expired' }); // Return directly if OTP is expired
+      }
 
-// }
+      // Clear the OTP and expiration fields in the user model
+      user.otp = null;
+      user.otpExpiry = null;
 
-// })
+      // Save the updated user data to the database
+      await user.save();
 
-// export const handleVerifyOtp = asyncHandler(async (req, res ) => {
-//   try {
-//       // Extracting OTP from the request body
-//       const { otp } = req.body;
+  
 
-//       // Find the user by OTP
-//       const user = await User.findOne({ otp });
+      // Respond with success once OTP is verified
+      return res.status(200).json({ success: true, message: 'OTP verified successfully!' });
+  } catch (error) {
+    console.log("Error in verifying  otp on forgotpassword , verification of otp",error)
+    next(error)
+  }
+});
 
-//       // If the user with the provided OTP doesn't exist, return a 404 error
-//       if (!user) {
-//           return res.status(404).json({ message: 'Invalid OTP or expired' });
-//       }
 
-//       // Check if the OTP is expired
-//       if (Date.now() > user.otpExpiry) {
-//           return res.status(400).json({ message: 'OTP expired' }); // Return directly if OTP is expired
-//       }
+export const handleUserNewPassword = async(req,res,next) => {
 
-//       // Clear the OTP and expiration fields in the user model
-//       user.otp = null;
-//       user.otpExpiry = null;
+ 
 
-//       // Save the updated user data to the database
-//       await user.save();
+  try {
 
-//       // // Store the email in the session
-//       // req.session.email = user.email;
+    const {email,password} = req.body
 
-//       // Respond with success once OTP is verified
-//       return res.status(200).json({ success: true, message: 'OTP verified successfully!' });
-//   } catch (error) {
-//     console.log("Error in verify otp")
-//     error.statusCode = 400; // Set the status code
-//     throw error; // Throw the error
-//   }
-// });
+    if(!email  || !password){
+      return res.status(400).json({
+        success:false,
+        message:"please provide valid email and password"
+      })
+    }
 
-// export const handleUserResetPassword = asyncHandler(async () => {
+    if(password.length < 6){
+      return res.status(400).json({
+        succees:false,
+        message:"password must be atleast 6 characters long"
+      })
+    }
 
-//   const {newPassword} = req.body
-//   const email = req.session.email
+      // Find the user by email
+      const user = await User.findOne({ email });
 
-//   if (!email) {
-//     return res.status(400).json({ message: 'Session expired. Please request a new OTP.' });
-//   }
+      if (!user) {
+        return res.status(404).json({
+          success:false,
+          message: 'User not found'
+         });
+      }
 
-//   const user = await User.findOne({email})
+      user.password = password
 
-//   if (!user) {
-//     return res.status(404).json({ message: 'User not found.' });
-//   }
+      await user.save();
 
-//   user.password = await bcrypt.hash(newPassword, 10);//i have to manually handle this , schema methods doesnot handle this
+      return res.status(200).json({
+        success:true,
+        message:"password reset successFully"
+      })
+    
+  } catch (error) {
 
-//   await user.save()
+    console.log("error in setting new password controller",error)
+    next(error)
+    
+  }
 
-//       // Clear the session data for security
-//       req.session.email = null; // Clear the stored email
+}
 
-//       res.status(200).json({ message: 'Password reset successfully!' });
 
-// });
+
+
+
+
+
+
+
+
+
+
+
+

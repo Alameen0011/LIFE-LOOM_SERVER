@@ -23,6 +23,14 @@ export const userAuth = (req, res,next) => {
 
     jwt.verify(token, process.env.JWT_SECRET_ACCESS, async (err, decoded) => {
       console.log(decoded,"decoded thing from token")
+      try {
+        const user = await User.findOne({ _id: decoded?.id })
+        console.log(user,"user in auth part")
+        if (user?.isActive === false) {
+            return res.status(401).json({ message: 'Account has been blocked' })
+        }
+    } catch (error) {
+    }
       if (err) {
         return res.status(403).json({ message: "Forbidden token expired" });
       } else if (decoded.role !== "user") {
@@ -49,7 +57,7 @@ export const adminAuth = (req, res, next) => {
     "inside adminAuthorization & authentication block way"
   );
   if (!adminToken) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "Unauthorized " });
   }
   jwt.verify(adminToken, process.env.JWT_SECRET_ACCESS, (err, decoded) => {
     if (err) {

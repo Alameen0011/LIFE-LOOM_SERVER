@@ -5,51 +5,119 @@ import Category from "../../models/category.model.js";
 import Product from "../../models/product.model.js";
 
 // GET /api/v1/user/getProducts
-export const handleGetProducts = async( req,res) => {
+export const handleGetProducts = async( req,res,next) => {
     try {
+
+       const {page, limit, sortBy,categories,brands, searchTerm , priceRange} = req.query;
+
+       console.log(req.query)
+
+       const skip = ((page - 1)* limit)
+       const currPage = parseInt(page)
+      
+
+
+       const query = {
+        deleted:false,
+        status:true
+       };
+
+       if(categories){
+        query.category = {$in:categories.split(',')};
+       }
+
+       if(searchTerm){
+        query.productName = {$regex :searchTerm,$options:'i'}
+       }
+
+       if(priceRange){
+        console.log(priceRange)
+        const [minPrice , maxPrice ] = priceRange.split(',').map(Number);
+        query.price = {$gte : minPrice, $lte: maxPrice};
+       }
+
+       if(brands){
+        console.log(brands,"brand to find product")
+        query.brand = {$in:brands.split(',')};
+       }
+
+
+       const sortOptions = {};
+
+       if(sortBy ==="LowToHigh") sortOptions.price = 1;
+       if(sortBy === "HighToLow") sortOptions.price = -1;
+       if(sortBy === "NewArrivals") sortOptions.createdAt = -1;
+       if(sortBy === "Aa-Zz") sortOptions.name = 1;
+       if(sortBy === "Zz-Aa") sortOptions.name = -1
+
+
+       console.log(query,"query to db")
   
       //Fetch all products with populated Category 
-      const products = await Product.find({deleted:false,status:true}).populate('category')
-  
-  
-      //Fetching all categoreis 
-      const category = await Category.find({status:true,deleted:false})
-      if (!category) {
-        return res
-          .status(500)
-          .json({ success: false, message: "Failed to fetch categories" });
-      }
+      const products = await Product.find(query).populate({
+        path:"category",
+        match:{status:true}
+      }).sort(sortOptions)
+      .skip(skip)
+      .limit(Number(limit))
 
-      console.log(category,"active categories")
-    
+      console.log(products,"products")
+
+      const filteredProducts = products.filter(product => product.category !== null);
+
+      console.log(filteredProducts,"filtered products")
   
       //checking if product exists
-     if(!products.length){
+     if(!filteredProducts.length){
       return res.status(200).json({
         success:true,
         message:"No products found",
-        category
       })
      }
+
+     const totalProducts = await Product.countDocuments(query)
   
      //if everything was succesfull
     return  res.status(200).json({
       success:true,
-      products,
-      category
+      filteredProducts,
+      totalPages:Math.ceil(totalProducts/limit),
+      page:currPage
      })
   
   
       
     } catch (error) {
       console.log(error,"error on products")
-      res.status(500).json({message:"Internal server error"})
+      console.log(error.name,error.message)
+      next(error)
       
     }
   }
 
 
-  export const handleSingleProduct = async(req,res) => {
+  export const handleGetHomeProducts = async (req,res,next) =>{
+    try {
+
+      const products = await Product.find().limit(4)
+     if(products)
+      res.status(200).json({
+     success:true,
+     message:"product fetched successFully",
+     products,
+    })
+
+      
+    } catch (error) {
+
+      console.log(error,"errro while getting products for homepage")
+      next(error)
+      
+    }
+  }
+
+
+  export const handleSingleProduct = async(req,res,next) => {
     try {
 
       const productId = req.params.id
@@ -90,7 +158,7 @@ export const handleGetProducts = async( req,res) => {
   } catch (error) {
 
       console.error('Error fetching category:', error);
-      res.status(500).json({ message: 'Server error. Please try again later.' });
+     next(error)
 
 
       

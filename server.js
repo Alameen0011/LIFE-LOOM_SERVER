@@ -13,6 +13,7 @@ import userRoutes from './routes/user.route.js'
 import { errorHandler } from './middlewares/errorMiddleware.js'
 import { successHandler } from './middlewares/successMiddleware.js'
 import connectDB from './config/db.js'
+import "./jobs/cronJob.js"
 
 
 

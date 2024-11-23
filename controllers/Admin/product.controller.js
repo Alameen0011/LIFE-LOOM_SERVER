@@ -1,4 +1,5 @@
 import Category from "../../models/category.model.js";
+import Offer from "../../models/offer.model.js";
 import Product from "../../models/product.model.js";
 
 export const handleAddProduct = async (req, res, next) => {
@@ -29,6 +30,16 @@ export const handleAddProduct = async (req, res, next) => {
         .json({ message: "At least 3 product images are required" });
     }
 
+    const offers = await Offer.find({
+      offerType: "category",
+      targetId: category,
+    });
+
+    let offerId = null;
+    if (offers.length > 0) {
+      offerId = offers[0]._id;
+    }
+
     // Create new product instance
     const newProduct = new Product({
       productName: name,
@@ -39,6 +50,7 @@ export const handleAddProduct = async (req, res, next) => {
       sizes,
       images,
       sku,
+      offer: offerId,
       brand,
       totalStock,
     });

@@ -147,11 +147,10 @@ export const handleUserLogin = asyncHandler(async (req, res) => {
   if (!user.isActive) {
     return res.status(409).json({ success: false, message: "user is blocked" });
   }
-
-  if (!user && !(await user.matchPassword(password))) {
+  if (!user || !(await user.matchPassword(password))) {
     return res.status(400).json({
       success: false,
-      message: "Inavlid credentials",
+      message: "Invalid credentials",
     });
   }
 
@@ -175,7 +174,7 @@ export const handleUserLogin = asyncHandler(async (req, res) => {
 });
 
 //handling resent otp
-export const handleResendOtp = asyncHandler(async (req, res,next) => {
+export const handleResendOtp = asyncHandler(async (req, res, next) => {
   try {
     const { email } = req.body;
 
@@ -217,7 +216,7 @@ export const handleResendOtp = asyncHandler(async (req, res,next) => {
     res.status(200).json({ message: "OTP has been resent successfully." });
   } catch (error) {
     console.error("Error in resendOtpController:", error);
-    next(error)
+    next(error);
   }
 });
 
@@ -330,7 +329,7 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
     }
 
     //generate refreshToken
-    const userRefreshToken =  generateRefreshToken(id);
+    const userRefreshToken = generateRefreshToken(id);
     //generate accessToken
     res.cookie("refreshToken", userRefreshToken, {
       httpOnly: true,
@@ -378,159 +377,186 @@ export const getUser = async (req, res) => {
   }
 };
 
-
 //---------------Forgot password play with user model -----------------//
 
-export const handleForgotPassword = async(req,res,next) => {
+export const handleForgotPassword = async (req, res, next) => {
+  const { email } = req.body;
 
-    const {email} = req.body
-
-
-    try {
- 
-  
-      console.log(email);
-  
-      // Check if the email is provided
-      if (!email) {
-        return res
-          .status(400)
-          .json({ message: "Email is required to resend OTP." });
-      }
-  
-      // Find the user by email
-      const user = await User.findOne({ email });
-  
-      if (!user) {
-        return res
-          .status(404)
-          .json({ message: "There is no user found in this particular email" });
-      }
-  
-      //generate otp
-      const otp = crypto.randomInt(100000, 999999).toString(); // Generate a 6-digit OTP
-      const otpExpiry = Date.now() + 5 * 60 * 1000; // OTP expires in 5 minutes
-  
-      // Update the user's OTP and expiry time in the database
-      user.otp = otp;
-      user.otpExpiry = otpExpiry;
-      await user.save();
-  
-      const mailOptions = {
-        from: process.env.EMAIL_APP,
-        to: user.email,
-        subject: "Leaf and Loom  Resend  OTP",
-        text: `Hello ${user.firstName},your otp for signup on Leaf and Loom is ${otp}. This otp is valid for 15 minutes `,
-      };
-  
-      await transporter.sendMail(mailOptions);
-      res.status(200).json({
-        success:true,
-        email,
-        message: "OTP has been send to you email." });
-    } catch (error) {
-      console.error("Error in Forgotpassword controller:", error);
-      next(error)
-    }
-}
-
-
-export const handleVerifyOtp = asyncHandler(async (req, res,next ) => {
   try {
-      // Extracting OTP from the request body
-      const { otp } = req.body;
+    console.log(email);
 
-      // Find the user by OTP
-      const user = await User.findOne({ otp });
+    // Check if the email is provided
+    if (!email) {
+      return res.status(400).json({ message: "Email is required to OTP." });
+    }
 
-      // If the user with the provided OTP doesn't exist, return a 404 error
-      if (!user) {
-          return res.status(404).json({ message: 'Invalid OTP or expired' });
-      }
+    // Find the user by email
+    const user = await User.findOne({ email });
 
-      // Check if the OTP is expired
-      if (Date.now() > user.otpExpiry) {
-          return res.status(400).json({ message: 'OTP expired' }); // Return directly if OTP is expired
-      }
+    if (!user) {
+      return res.status(404).json({
+        succees: false,
+        message: "There is no user found who signed with this email",
+      });
+    }
 
-      // Clear the OTP and expiration fields in the user model
-      user.otp = null;
-      user.otpExpiry = null;
+    //generate otp
+    const otp = crypto.randomInt(100000, 999999).toString(); // Generate a 6-digit OTP
+    const otpExpiry = Date.now() + 5 * 60 * 1000; // OTP expires in 5 minutes
 
-      // Save the updated user data to the database
-      await user.save();
+    // Update the user's OTP and expiry time in the database
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
 
-  
+    const mailOptions = {
+      from: process.env.EMAIL_APP,
+      to: user.email,
+      subject: "Leaf and Loom  Resend  OTP",
+      text: `Hello ${user.firstName},your otp for signup on Leaf and Loom is ${otp}. This otp is valid for 15 minutes `,
+    };
 
-      // Respond with success once OTP is verified
-      return res.status(200).json({ success: true, message: 'OTP verified successfully!' });
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({
+      success: true,
+      email,
+      message: "An otp has been send to you email.",
+    });
   } catch (error) {
-    console.log("Error in verifying  otp on forgotpassword , verification of otp",error)
-    next(error)
+    console.error("Error in Forgotpassword controller:", error);
+    next(error);
+  }
+};
+
+export const handleVerifyOtp = asyncHandler(async (req, res, next) => {
+  try {
+    const { otp } = req.body;
+
+    const user = await User.findOne({ otp });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "otp is invalid",
+      });
+    }
+
+    if (Date.now() > user.otpExpiry) {
+      return res.status(400).json({
+        success: false,
+        message: "otp is expired",
+      });
+    }
+
+    user.otp = null;
+    user.otpExpiry = null;
+
+   const savedUser = await user.save();
+
+    res.status(200).json({
+         success: true,
+         message: "OTP verified successfully!" ,
+         savedUser
+        });
+  } catch (error) {
+    console.log(
+      "Error in verifying  otp on forgotpassword , verification of otp",
+      error
+    );
+    next(error);
   }
 });
 
-
-export const handleUserNewPassword = async(req,res,next) => {
-
- 
-
+export const handleUserNewPassword = async (req, res, next) => {
   try {
 
-    const {email,password} = req.body
+    console.log(req.body)
+    const { email, password } = req.body;
+ 
+    console.log(email,password,"=====email, password")
 
-    if(!email  || !password){
+    if (!email || !password) {
       return res.status(400).json({
-        success:false,
-        message:"please provide valid email and password"
-      })
+        success: false,
+        message: "please provide valid email and password",
+      });
     }
 
-    if(password.length < 6){
+    if (password.length < 6) {
       return res.status(400).json({
-        succees:false,
-        message:"password must be atleast 6 characters long"
-      })
+        succees: false,
+        message: "password must be atleast 6 characters long",
+      });
     }
 
-      // Find the user by email
-      const user = await User.findOne({ email });
+    // Find the user by email
+    const user = await User.findOne({ email });
 
-      if (!user) {
-        return res.status(404).json({
-          success:false,
-          message: 'User not found'
-         });
-      }
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-      user.password = password
+    user.password = password;
 
-      await user.save();
+  const updatedPassUser =  await user.save();
 
-      return res.status(200).json({
-        success:true,
-        message:"password reset successFully"
-      })
-    
+    return res.status(200).json({
+      success: true,
+      message: "password reset successFully",
+      updatedPassUser,
+    });
   } catch (error) {
-
-    console.log("error in setting new password controller",error)
-    next(error)
-    
+    console.log("error in setting new password controller", error);
+    next(error);
   }
-
-}
-
+};
 
 
+export const handleForgotResendOtp = asyncHandler(async (req, res, next) => {
+  try {
+    const { email } = req.body;
 
+    console.log(email);
 
+    // Check if the email is provided
+    if (!email) {
+      return res
+        .status(400)
+        .json({ message: "Email is required to resend OTP." });
+    }
 
+    // Find the user by email
+    const user = await User.findOne({ email });
 
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "dude you have to make this fast" });
+    }
 
+    //generate otp
+    const otp = crypto.randomInt(100000, 999999).toString(); // Generate a 6-digit OTP
+    const otpExpiry = Date.now() + 5 * 60 * 1000; // OTP expires in 5 minutes
 
+    // Update the user's OTP and expiry time in the database
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
 
+    const mailOptions = {
+      from: process.env.EMAIL_APP,
+      to: user.email,
+      subject: "Leaf and Loom  Resend  OTP",
+      text: `Hello ${user.firstName},your otp for signup on Leaf and Loom is ${otp}. This otp is valid for 15 minutes `,
+    };
 
-
-
-
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "OTP has been resent successfully." });
+  } catch (error) {
+    console.error("Error in resendOtpController:", error);
+    next(error);
+  }
+});

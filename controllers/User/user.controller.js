@@ -1,9 +1,8 @@
-import bcryptjs from "bcryptjs";
 import Address from "../../models/address.model.js";
 import Cart from "../../models/cart.model.js";
 import Product from "../../models/product.model.js";
 import User from "../../models/user.model.js";
-import bcrypt from "bcryptjs";
+
 
 export const handleGetUserProfile = async (req, res, next) => {
   try {
@@ -122,7 +121,7 @@ export const handleResetPassword = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "password updated successfully",
-      user:userObj,
+      user: userObj,
     });
   } catch (error) {
     console.log("error while reseting password", error);
@@ -170,6 +169,7 @@ export const handleAddAddress = async (req, res, next) => {
 export const handleFetchAllAddress = async (req, res, next) => {
   try {
     const id = req.id;
+    console.log(id, "id from user auth");
 
     const Addresses = await Address.find({ user: id }).populate("user");
 
@@ -250,21 +250,19 @@ export const handleUpdateAddress = async (req, res, next) => {
   }
 };
 
-
-export const handleDeleteAddress = async(req,res,next) => {
+export const handleDeleteAddress = async (req, res, next) => {
   try {
+    const addressId = req.params.id;
 
-    const addressId = req.params.id
+    console.log(addressId, "address Id");
 
-    console.log(addressId,"address Id")
+    const deletedAddress = await Address.findByIdAndDelete(addressId);
 
-    const deletedAddress = await Address.findByIdAndDelete(addressId)
-
-    if(!deletedAddress){
+    if (!deletedAddress) {
       return res.status(404).json({
-        success:false,
-        message:"Address not found"
-      })
+        success: false,
+        message: "Address not found",
+      });
     }
 
     res.status(200).json({
@@ -272,12 +270,11 @@ export const handleDeleteAddress = async(req,res,next) => {
       message: "Address successfully deleted",
       deletedAddress,
     });
-    
   } catch (error) {
-    console.log("error while deleting address")
-    next(error)
+    console.log("error while deleting address");
+    next(error);
   }
-}
+};
 
 // cart management controllers
 
@@ -334,9 +331,27 @@ export const handleFetchingCart = async (req, res, next) => {
   try {
     const userId = req.id;
 
-    const cart = await Cart.findOne({ userId }).populate("items.productId");
+    const cartData = await Cart.findOne({ userId }).populate({
+      path: "items.productId",
+      populate: {
+        path: "offer",
+        model: "offer",
+      },
+    }).lean();
 
-    console.log(cart);
+    console.log(cartData);
+
+   const cart = {
+    ...cartData,
+    items:cartData.items.map((item) => {
+      return {
+        ...item,
+        price:Math.round(
+          item.price - ((item.price * (item.productId.offer?.offerPercentage ? item.productId.offer.offerPercentage : 1) ) /100 ) 
+        )
+      }
+     })
+   }
 
     if (cart) {
       res.status(200).json({
@@ -355,7 +370,6 @@ export const handleFetchingCart = async (req, res, next) => {
     next(error);
   }
 };
-
 
 export const handleDeleteCart = async (req, res, next) => {
   const userId = req.id;

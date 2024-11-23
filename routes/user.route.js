@@ -23,8 +23,10 @@ import {
   addAddressValidationRules,
   validate,
 } from "../middlewares/validationMiddleware.js";
-import { handleCancelOrder, handleFetchOrder, handleGetSingleOrder, handlePlaceOrder } from "../controllers/User/order.controller.js";
+import { handleApplyCoupon, handleCancelOrder, handleFetchOrder, handleGetCoupon, handleGetSingleOrder, handlePlaceOrder, handleReturnRequest } from "../controllers/User/order.controller.js";
 import { handleFetchActiveCategory } from "../controllers/User/category.controller.js";
+import { handleAddToWishlist, handleFetchWishlist, handleRemoveWishlist } from "../controllers/User/wishlist.controller.js";
+import { handleGetUserWallet } from "../controllers/User/wallet.controller.js";
 
 const router = express.Router();
 
@@ -70,8 +72,24 @@ router.post('/order/placeOrder',handlePlaceOrder)
 router.get('/order/getOrder',handleFetchOrder)
 router.get('/order/getSingleOrder/:id',handleGetSingleOrder)
 router.patch('/order/:orderId/item/:itemId/cancelOrder',handleCancelOrder)
+router.post('/order/:orderId/product/:itemId/returnRequest',handleReturnRequest)
+
+//couon api
+router.post("/order/applyCoupon",handleApplyCoupon)
+router.get("/getCoupons",handleGetCoupon)
+
+//wallet api
+router.get("/wallet",handleGetUserWallet)
 
 
+//
+
+//wishlist api
+router
+    .route('/wishList')
+    .post(handleAddToWishlist)  
+    .delete(handleRemoveWishlist) 
+    .get(handleFetchWishlist); 
 
 
 export default router;

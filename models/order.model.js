@@ -16,9 +16,29 @@ const orderSchema = new mongoose.Schema(
     
         status:{
           type: String,
-          enum: ["Processing", "Shipped", "Delivered", "Cancelled"], // Define valid status values
-          default: "Processing" // Default status for each item
-        }
+          enum: ["Processing", "Shipped", "Delivered", "Cancelled","Returned"],
+          default: "Processing"
+        },
+        returnRequest: {
+          isRequested: {
+              type: Boolean,
+              default: false,
+          },
+          reason: {
+              type: String,
+          },
+          comment: {
+              type: String,
+          },
+          isApproved: {
+              type: Boolean,
+              default: false,
+          },
+          isResponseSend : {
+              type: Boolean,
+              default: false,
+          },
+      },
       },
     ],
     shippingDetails: {
@@ -33,7 +53,7 @@ const orderSchema = new mongoose.Schema(
     paymentDetails: {
       method: {
         type: String,
-        enum: ["cod", "Credit Card", "PayPal"],
+        enum: ["cod", "Credit Card", "razorpay","wallet"],
         required: true,
       },
       status: {
@@ -43,9 +63,31 @@ const orderSchema = new mongoose.Schema(
       },
     },
     totalAmount: { type: Number, required: true },
+    finalTotalAfterDiscount:{
+      type:Number,
+      default:null
+    },
+    discount:{
+      type:Number,
+      default:null
+
+    },
+    coupon:{
+      type:String,
+      default:null
+
+    },
+    savedAmount:{
+      type:Number,
+      default:null
+    },
+    actualAmount:{
+      type:Number,
+      default:null
+    },
     status: {
       type: String,
-      enum: ["Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: ["Processing", "Shipped", "Delivered", "Cancelled","Returned"],
       default: "Processing",
     },
   },

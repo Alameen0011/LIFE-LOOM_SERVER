@@ -1,30 +1,48 @@
+import Cart from "../../models/cart.model.js";
+import Coupon from "../../models/coupon.model.js";
 import Order from "../../models/order.model.js";
 import Product from "../../models/product.model.js";
+import Wallet from "../../models/wallet.js";
 
 export const handlePlaceOrder = async (req, res, next) => {
   const userId = req.id;
-  const { items, shippingDetails, paymentDetails, totalAmount } = req.body;
-
-  console.log(shippingDetails, "Shipping detail");
-  console.log(paymentDetails, "payment details");
-  console.log(totalAmount);
+  const {
+    items,
+    shippingDetails,
+    paymentDetails,
+    totalAmount,
+    finalTotal,
+    discount,
+    coupon,
+  } = req.body;
 
   try {
-    //validation of incoming data
     if (!items || !shippingDetails || !paymentDetails || !totalAmount) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
       });
     }
-    console.log(items, "items");
+
+    console.log(
+      finalTotal,
+      "==finaltotal",
+      coupon,
+      "==coupon",
+      totalAmount,
+      "total =======",
+      discount,
+      "=====discount"
+    );
 
     for (const item of items) {
       const { product: productId, quantity, size: realSize } = item;
 
-      console.log(`Checking stock for Product: ${productId}, Size: ${realSize}, Quantity: ${quantity}`);
+      console.log(
+        `Checking stock for Product: ${productId}, Size: ${realSize}, Quantity: ${quantity}`
+      );
 
-      const product = await Product.findOne({ _id: productId }, { sizes: 1 });
+      const product = await Product.findOne({ _id: productId });
 
       console.log(product, "product, for checking stock vaiblility");
 
@@ -56,22 +74,64 @@ export const handlePlaceOrder = async (req, res, next) => {
       }
     }
 
+    async function calculateSavings(items, totalAmount) {
+      const populatedItems = await Promise.all(
+        items.map(async (item) => {
+          const product = await Product.findById(item.product);
+          if (!product) {
+            throw new Error(`Product with ID ${item.product} not found`);
+          }
+
+          return {
+            ...item,
+            actualPrice: product.price,
+          };
+        })
+      );
+
+      const totalOriginalPrice = populatedItems.reduce((sum, item) => {
+        return sum + item.actualPrice * item.quantity;
+      }, 0);
+
+      const savings = totalOriginalPrice - totalAmount;
+
+      const roundedTotalOriginalPrice = totalOriginalPrice.toFixed(2);
+      const roundedSavings = savings.toFixed(2);
+
+      console.log(savings, "=====savings");
+      console.log(totalOriginalPrice, "========original price");
+
+      return {
+        totalOriginalPrice: parseFloat(roundedTotalOriginalPrice),
+        savings: parseFloat(roundedSavings),
+      };
+    }
+
+    const { totalOriginalPrice, savings } = await calculateSavings(
+      items,
+      totalAmount
+    );
+
     const newOrder = new Order({
       user: userId,
       items,
       shippingDetails,
       paymentDetails,
       totalAmount,
+      savedAmount: savings,
+      actualAmount: totalOriginalPrice,
+      coupon,
+      discount,
+      finalTotalAfterDiscount: finalTotal,
       status: "Processing",
     });
 
     const savedOrder = await newOrder.save();
     console.log(savedOrder, "saved order look size");
 
-    //Look this up this is interesting
     await Promise.all(
       items.map(async (item) => {
-        const { product: productId, quantity, size } = item; // Destructure item
+        const { product: productId, quantity, size } = item;
 
         console.log(
           `Updating product: ${productId}, Size: ${size}, Quantity: ${quantity}`
@@ -81,7 +141,7 @@ export const handlePlaceOrder = async (req, res, next) => {
           const result = await Product.findOneAndUpdate(
             { _id: productId, "sizes.size": size },
             { $inc: { "sizes.$.stock": -quantity } },
-            { new: true } // Option to return the updated document
+            { new: true }
           );
 
           if (!result) {
@@ -102,7 +162,7 @@ export const handlePlaceOrder = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: "order place successFully",
+      message: "order placed successFully",
       savedOrder,
     });
   } catch (error) {
@@ -114,21 +174,21 @@ export const handlePlaceOrder = async (req, res, next) => {
 export const handleFetchOrder = async (req, res, next) => {
   const userId = req.id;
 
-  let { page, limit } = req.query;
-  page = parseInt(page) || 1;
-  limit = parseInt(limit) || 4;
+  const { page, limit } = req.query;
 
   const skip = (page - 1) * limit;
 
   const totalOrders = await Order.countDocuments();
 
   const totalPages = Math.ceil(totalOrders / limit);
+  console.log(totalPages, "totoal pages");
 
   try {
     const orders = await Order.find({ user: userId })
       .populate("items.product")
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({createdAt:-1});
 
     console.log(orders, "order");
 
@@ -163,6 +223,10 @@ export const handleGetSingleOrder = async (req, res, next) => {
       model: "product",
     });
 
+    const orderData = order.items.map((item) => {});
+
+    // console.log(orderData,"===OrderData")
+
     console.log(order, "order");
 
     res.status(200).json({
@@ -177,7 +241,8 @@ export const handleGetSingleOrder = async (req, res, next) => {
 
 export const handleCancelOrder = async (req, res, next) => {
   try {
-    console.log(req.params);
+    const userId = req.id
+
     const { orderId, itemId } = req.params;
 
     const order = await Order.findById(orderId);
@@ -189,7 +254,6 @@ export const handleCancelOrder = async (req, res, next) => {
       });
     }
 
-    console.log(order, "order to cancel");
 
     const item = order.items.find((val) => val._id.toString() === itemId);
 
@@ -216,7 +280,15 @@ export const handleCancelOrder = async (req, res, next) => {
       "we have founded the status of item was processing so we are fucking cancelling it because i the great admin"
     );
 
+    let refundAmount = item.price * item.quantity;
+    // if(order.discount > 0){
+    //   const totalOrderValue = order.finalTotalAfterDiscount
+    // }
+    console.log(refundAmount,"==== refund amoutn")
+
     item.status = "Cancelled";
+
+  
     //rollback inventory
 
     const product = await Product.findById(item.product);
@@ -245,11 +317,49 @@ export const handleCancelOrder = async (req, res, next) => {
       }
     }
 
+    let description = `${product.productName} cancelled` 
+
+    console.log(description,"desription")
+    if (order.paymentDetails.method === "razorpay") {
+      let wallet = await Wallet.findOne({ user: userId });
+
+
+
+      if (!wallet) {
+        wallet = new Wallet({
+          user: userId,
+          balanceAmount: 0,
+          transactions: [],
+        });
+      }
+
+      wallet.balanceAmount += refundAmount;
+      wallet?.transactions.push({
+        orderId: order._id,
+        description,
+        transactionDate: new Date(),
+        transactionType: "credited",
+        transactionStatus: "Completed",
+        amount: refundAmount,
+      });
+
+     console.log("wallet saving +++===",wallet)
+
+      await wallet.save();
+    }
+
+
     if (order.items.every((eachProd) => eachProd.status === "Cancelled")) {
       order.status = "Cancelled";
     }
 
-    await order.save();
+    console.log("order saving ====")
+
+   const newOrder = await order.save();
+
+
+    console.log("order saved ===",newOrder)
+
     res.status(200).json({
       success: true,
       message: "product order cancelled successFully",
@@ -259,3 +369,174 @@ export const handleCancelOrder = async (req, res, next) => {
     next(error);
   }
 };
+
+export const handleApplyCoupon = async (req, res, next) => {
+  const { code } = req.body;
+  const userId = req.id;
+
+  try {
+    const cart = await Cart.findOne({ userId });
+
+    if (!cart || !cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "cart is empty",
+      });
+    }
+
+    const cartTotal = cart.items.reduce((total, val) => {
+      return total + val.quantity * val.price;
+    }, 0);
+
+    console.log(cartTotal, "==========cart total ");
+
+    const coupon = await Coupon.findOne({ code });
+
+    console.log(coupon, "+++++++coupon");
+
+    if (!coupon) {
+      return res.status(400).json({
+        success: false,
+        message: "coupon not found",
+      });
+    }
+
+    const valdiation = coupon.isValid(userId, cartTotal);
+    if (!valdiation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: valdiation.reason,
+      });
+    }
+
+    console.log("succesfully finished validation");
+
+    await coupon.markAsUsed(userId);
+
+    console.log("successfullyfindished usage marking");
+
+    let discount = (cartTotal * coupon.discountValue) / 100;
+
+    console.log(discount, "++++Discoutn");
+
+    if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
+      discount = coupon.maxDiscountAmount;
+    }
+
+    const finalTotal = cartTotal - discount;
+
+    console.log(finalTotal, "=========final total");
+
+    res.status(200).json({
+      success: true,
+      message: "Coupon applied successfully",
+      discount,
+      cartTotal,
+      finalTotal,
+    });
+  } catch (error) {
+    console.log(error, "error while applying coupon");
+    next(error);
+  }
+};
+
+export const handleReturnRequest = async (req, res, next) => {
+  console.log("inside handleReturn request");
+  console.log(req.params);
+  console.log(req.body);
+  const userId = req.id
+  const { orderId, itemId } = req.params;
+  const { reason, comments } = req.body;
+  try {
+    console.log(
+      reason,
+      comments,
+      orderId,
+      itemId,
+      "=========all credentials necessary for return product"
+    );
+
+    const order = await Order.findOne({ _id: orderId });
+
+    console.log(order, "----- order to find indi product and delete");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "order not found",
+      });
+    }
+
+    const product = order.items.find((item) => item._id.toString() === itemId);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "item to return not found",
+      });
+    }
+
+    console.log(product, "===product to make return ");
+
+    if (product.returnRequest.isRequested) {
+      return res.status(409).json({
+        success: false,
+        message: "return request already exist",
+      });
+    }
+
+    product.returnRequest = {
+      isRequested: true,
+      reason,
+      comment: comments,
+      isApproved: false,
+      isResponseSend: false,
+    };
+
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "return requested successFully",
+      order,
+    });
+  } catch (error) {
+    console.log(error, "error while return request");
+    next(error);
+  }
+};
+
+
+export const handleGetCoupon = async(req,res, next)  => {
+  
+  try {
+
+
+    const coupon = await Coupon.find()
+
+    console.log(coupon,"===coupon")
+
+    if(!coupon){
+      return res.status(404).json({
+        succes:false,
+        message:"coupon not found"
+
+      })
+    }
+
+    res.status(200).json({
+      success:true,
+      message:"coupon fetched successfully",
+      coupons:coupon,
+    })
+    
+  } catch (error) {
+    console.log(error,"error while fetching coupon")
+    next(error)
+  }
+}
+
+
+
+

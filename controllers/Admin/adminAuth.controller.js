@@ -27,32 +27,33 @@ export const handleAdminCreate = async (req, res, next) => {
       admin,
     });
   } catch (error) {
-    console.log("error while creating admin",error)
-    next(error)
+    console.log("error while creating admin", error);
+    next(error);
   }
 };
 
-export const handleAdminLogin = async (req, res,next) => {
+export const handleAdminLogin = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    console.log("inside admin login");
+
     console.log(email, password);
 
     const admin = await Admin.findOne({ email });
 
-    console.log("admin", admin);
+    if (!admin) {
+      return res
+        .status(404)
+        .json({
+           success: false,
+           message: "Admin not found"
+           });
+    }
 
     if (!admin && !(await admin.matchPassword(password))) {
       return res.status(400).json({
         success: false,
         message: "Inavlid credentials",
       });
-    }
-
-    if (!admin) {
-      return res
-        .status(404)
-        .json({ status: "false", message: "Admin not found" });
     }
 
     await Admin.findByIdAndUpdate(admin._id, { lastLogin: Date.now() });
@@ -83,17 +84,12 @@ export const handleAdminLogin = async (req, res,next) => {
       .json({ message: "Admin logged in successfully", data });
   } catch (error) {
     // Handle errors gracefully without throwing another error
-    console.log("error while admin login")
-   next(error)
+    console.log("error while admin login");
+    next(error);
   }
 };
 
-export const logout = async (req, res) => {
-  req.clearCookie("refreshToken");
-  return res.status(200).json({ message: "admin Logged out successfully" });
-};
-
-export const getAllUsers = async (req, res,next) => {
+export const getAllUsers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 4;
@@ -126,7 +122,28 @@ export const getAllUsers = async (req, res,next) => {
       message: "fetched users successfully",
     });
   } catch (error) {
-    console.log("Error while getting all users")
-    next(error)
+    console.log("Error while getting all users");
+    next(error);
+  }
+};
+
+export const handleLogout = async (req, res, next) => {
+  console.log(req.cookies);
+  try {
+    const token = req.cookies.refreshToken;
+
+    console.log(token, "token ");
+
+    if (token) {
+      res.clearCookie("refreshToken");
+      // localStorage.removeItem("auth")
+    }
+    res.status(200).json({
+      success: true,
+      message: "logout successfully",
+    });
+  } catch (error) {
+    console.log(error, "error while logging out admin");
+    next(error);
   }
 };

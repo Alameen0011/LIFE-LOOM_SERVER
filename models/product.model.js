@@ -62,6 +62,12 @@ const productSchema = new mongoose.Schema({
     required: [true, "SKU is required"],
     unique: true,
   },
+  offer:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"offer",
+    default:null
+
+  },
   deleted: { type: Boolean, default: false }, 
   maxPerUser: { type: Number, default: 5 },
   status: {

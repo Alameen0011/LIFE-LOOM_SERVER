@@ -3,7 +3,10 @@ import { handleaddCategory, handleFetchCategories, handleSoftDeleteCategory, han
 import { handleUpdateUserStatus } from '../controllers/Admin/admin.controller.js';
 import { handleAddProduct, handleFetchAllProducts, handleFetchSingleProduct, handleSoftDeleteProduct, handleUpdateProduct } from '../controllers/Admin/product.controller.js';
 import { adminAuth } from '../middlewares/authMiddleware.js';
-import { handleAdminCancelOrder, handleCancelOrders, handleFetchAllOrders, handleGetSingleOrderAdmin, handleOrderStatusChange } from '../controllers/Admin/order.controller.js';
+import { handleAdminCancelOrder, handleCancelOrders, handleFetchAllOrders, handleGetSingleOrderAdmin, handleOrderItemStatusChange, handleOrderStatusChange, handleReturnResponse } from '../controllers/Admin/order.controller.js';
+import { handleAddOffer, handleDeleteOffer, handleFetchAllOffers, handleSearchProduct } from '../controllers/Admin/offer.controller.js';
+import { handleCreateCoupon, handleDeleteCoupon, handleFetchAllCoupon } from '../controllers/Admin/coupon.controller.js';
+import { handleGetSalesReport } from '../controllers/Admin/sales.controller.js';
 
 const router = express.Router()
 
@@ -32,9 +35,22 @@ router.patch("/order/:orderId/cancelOrder",handleAdminCancelOrder)
 router.patch("/order/status/:orderId",handleOrderStatusChange)
 router.get('/order/getSingleOrder/:id',handleGetSingleOrderAdmin)
 router.patch('/order/:orderId/item/:itemId/cancelOrder',handleCancelOrders)
+router.patch('/order/:orderId/item/:itemId/itemOrderStatusChange',handleOrderItemStatusChange)
+router.post('/order/:orderId/returnResponse',handleReturnResponse)
 
 
+router.get('/offers/fetchOffers',handleFetchAllOffers)
+router.post('/offer/addOffer',handleAddOffer)
+router.delete('/offer/deleteOffer',handleDeleteOffer)
+router.get('/offer/getProduct',handleSearchProduct)
 
+
+router.get('/coupon/getCoupons',handleFetchAllCoupon)
+router.post('/coupon/createCoupon',handleCreateCoupon)
+router.delete('/coupon/:id',handleDeleteCoupon)
+
+
+router.get("/sales",handleGetSalesReport)
 
 
 

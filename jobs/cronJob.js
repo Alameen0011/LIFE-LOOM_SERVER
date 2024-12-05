@@ -19,7 +19,7 @@ const updateExpiredCoupons = async () => {
     }
 };
 
-//scheduling the job to run every midNight
+
 cron.schedule("0 0 * * *", async() => {
     console.log("running cron job to check expired coupons.------")
     await updateExpiredCoupons();

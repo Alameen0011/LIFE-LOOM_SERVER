@@ -1,6 +1,18 @@
 import mongoose from "mongoose";
 import bcrypt from 'bcryptjs';
 
+
+function generateBrandedReferralCode(brand = 'LIFE', length = 8) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let uniquePart = '';
+  
+  for (let i = 0; i < length; i++) {
+      uniquePart += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  
+  return brand + uniquePart;
+}
+
 const userSchema = new mongoose.Schema({
     firstName: {
       type: String,
@@ -53,6 +65,14 @@ const userSchema = new mongoose.Schema({
        type: String,
        default: null 
       },
+    refferalCode:{
+      type:String,
+      unique:true
+    },
+    seenRefferal:{
+      type:Boolean,
+      default:false
+    }
   
  
    
@@ -61,8 +81,8 @@ const userSchema = new mongoose.Schema({
 
 
   userSchema.methods.matchPassword = async function (enteredPassword) {
-    return await bcrypt.compare(enteredPassword,this.password)//comparison of hashedPass and pass we get on login time from user
-    //return true or false
+    return await bcrypt.compare(enteredPassword,this.password)
+
   }
   
   userSchema.pre("save", async function (next) {
@@ -76,6 +96,13 @@ const userSchema = new mongoose.Schema({
       next(error);
     }
   });
+
+  userSchema.pre('save', function (next) {
+    if (this.isNew && !this.refferalCode) {
+        this.refferalCode = generateBrandedReferralCode();
+    }
+    next();
+});
 
 
   const User = mongoose.model('Users',userSchema)

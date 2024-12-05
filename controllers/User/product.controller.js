@@ -1,6 +1,4 @@
 // desc => for listing products in PLP
-
-import Category from "../../models/category.model.js";
 import Product from "../../models/product.model.js";
 
 // GET /api/v1/user/getProducts
@@ -74,6 +72,8 @@ export const handleGetProducts = async (req, res, next) => {
     if (!filteredProducts.length) {
       return res.status(200).json({
         success: true,
+        filteredProducts,
+        
         message: "No products found",
       });
     }
@@ -96,7 +96,7 @@ export const handleGetProducts = async (req, res, next) => {
 
 export const handleGetHomeProducts = async (req, res, next) => {
   try {
-    const products = await Product.find().limit(4);
+    const products = await Product.find().limit(8);
     if (products)
       res.status(200).json({
         success: true,

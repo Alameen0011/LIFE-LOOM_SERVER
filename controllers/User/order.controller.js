@@ -35,6 +35,16 @@ export const handlePlaceOrder = async (req, res, next) => {
       "=====discount"
     );
 
+    if(totalAmount > 1000){
+      //cod is not available 
+      if(paymentDetails.method === "cod"){
+        return res.status(400).json({
+          success:false,
+          message:"pleasee choose Online payment method"
+        })
+      } 
+    }
+
     for (const item of items) {
       const { product: productId, quantity, size: realSize } = item;
 
@@ -174,11 +184,13 @@ export const handlePlaceOrder = async (req, res, next) => {
 export const handleFetchOrder = async (req, res, next) => {
   const userId = req.id;
 
-  const { page, limit } = req.query;
+  const { page = 1, limit = 4 } = req.query;
+
+  console.log(page,limit,"page, limit")
 
   const skip = (page - 1) * limit;
 
-  const totalOrders = await Order.countDocuments();
+  const totalOrders = await Order.countDocuments({ user: userId });
 
   const totalPages = Math.ceil(totalOrders / limit);
   console.log(totalPages, "totoal pages");
@@ -536,6 +548,67 @@ export const handleGetCoupon = async(req,res, next)  => {
     next(error)
   }
 }
+
+
+export const handleRetryOrderPayment = async (req, res, next) => {
+  try {
+    console.log(req.body, "req.body======");
+
+    const { orderId, status } = req.body;
+
+
+    if (!orderId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID and payment status are required",
+      });
+    }
+
+
+    const order = await Order.findById(orderId);
+
+    console.log(order, "order------------");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+ 
+    const validStatuses = ["Paid", "Failed", "Pending"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment status provided",
+      });
+    }
+
+   
+    order.paymentDetails.status = status;
+
+    if (status === "Paid") {
+      order.status = "Processing"; 
+    } else if (status === "Failed") {
+      order.status = "Payment Failed";
+    }
+
+    await order.save();
+
+    console.log("Payment status updated successfully",order);
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment status updated successfully",
+      order,
+    });
+  } catch (error) {
+    console.log(error, "error while retrying payment");
+    next(error);
+  }
+};
+
 
 
 

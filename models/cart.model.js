@@ -16,11 +16,11 @@ const cartItemSchema = new mongoose.Schema({
     default: 1,
   },
   price: {
-    type: Number, //price of the product
+    type: Number, //price of the selected product  --//offer price all thing was inclued here
     required: true,
   },
   image: {
-    type: String, //URL of the product Image -for cart display
+    type: String, //URL of the product Image -for cart display this is user selected product storing purpose //image and product name can be populated
   },
   productName: {
     type: String, //name of the product for display purpose in cart

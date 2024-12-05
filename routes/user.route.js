@@ -23,10 +23,11 @@ import {
   addAddressValidationRules,
   validate,
 } from "../middlewares/validationMiddleware.js";
-import { handleApplyCoupon, handleCancelOrder, handleFetchOrder, handleGetCoupon, handleGetSingleOrder, handlePlaceOrder, handleReturnRequest } from "../controllers/User/order.controller.js";
+import { handleApplyCoupon, handleCancelOrder, handleFetchOrder, handleGetCoupon, handleGetSingleOrder, handlePlaceOrder, handleRetryOrderPayment, handleReturnRequest } from "../controllers/User/order.controller.js";
 import { handleFetchActiveCategory } from "../controllers/User/category.controller.js";
 import { handleAddToWishlist, handleFetchWishlist, handleRemoveWishlist } from "../controllers/User/wishlist.controller.js";
 import { handleGetUserWallet } from "../controllers/User/wallet.controller.js";
+import { handleApplyRefferalCode, handleCheckRefferalstatus, handleFetchReferralCode, handleSkipRefferalOffer } from "../controllers/User/referral.controller.js";
 
 const router = express.Router();
 
@@ -70,6 +71,7 @@ router.delete("/clearCart", handleDeleteCart);
 //order management api
 router.post('/order/placeOrder',handlePlaceOrder)
 router.get('/order/getOrder',handleFetchOrder)
+router.post('/order/retryPayment',handleRetryOrderPayment)
 router.get('/order/getSingleOrder/:id',handleGetSingleOrder)
 router.patch('/order/:orderId/item/:itemId/cancelOrder',handleCancelOrder)
 router.post('/order/:orderId/product/:itemId/returnRequest',handleReturnRequest)
@@ -80,6 +82,13 @@ router.get("/getCoupons",handleGetCoupon)
 
 //wallet api
 router.get("/wallet",handleGetUserWallet)
+
+
+//refferal
+router.route("/refferal").get(handleFetchReferralCode)
+router.post("/refferal",handleApplyRefferalCode)
+router.post("/refferal/skip",handleSkipRefferalOffer)
+router.get("/refferal/checkStatus",handleCheckRefferalstatus)
 
 
 //

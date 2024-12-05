@@ -6,7 +6,8 @@ import { adminAuth } from '../middlewares/authMiddleware.js';
 import { handleAdminCancelOrder, handleCancelOrders, handleFetchAllOrders, handleGetSingleOrderAdmin, handleOrderItemStatusChange, handleOrderStatusChange, handleReturnResponse } from '../controllers/Admin/order.controller.js';
 import { handleAddOffer, handleDeleteOffer, handleFetchAllOffers, handleSearchProduct } from '../controllers/Admin/offer.controller.js';
 import { handleCreateCoupon, handleDeleteCoupon, handleFetchAllCoupon } from '../controllers/Admin/coupon.controller.js';
-import { handleGetSalesReport } from '../controllers/Admin/sales.controller.js';
+import { handleDownloadSalesXl, handleGetSalesReport, handleInvoiceDownload, handleSalesPdfDownload } from '../controllers/Admin/sales.controller.js';
+import { handleGetBestSelling, handleGetChartData, handleGetDashboardData } from '../controllers/Admin/chart.controller.js';
 
 const router = express.Router()
 
@@ -51,6 +52,16 @@ router.delete('/coupon/:id',handleDeleteCoupon)
 
 
 router.get("/sales",handleGetSalesReport)
+router.get("/salesData",handleGetChartData)
+router.get("/bestSelling",handleGetBestSelling)
+router.get("/metricsDashboard",handleGetDashboardData)
+
+
+router.get("/salesPdf",handleSalesPdfDownload)
+router.get("/salesXl",handleDownloadSalesXl)
+
+
+router.get("/invoice",handleInvoiceDownload)
 
 
 

@@ -292,10 +292,11 @@ export const handleSalesPdfDownload = async (req, res, next) => {
 
     const pdf = new jsPDF();
 
-    // title
-    pdf.text("Sales Report", 10, 10);
+    // Title
+    pdf.setFontSize(16);
+    pdf.text("Sales Report", 105, 10, { align: "center" });
 
-    // table
+    // Table
     pdf.autoTable({
       startY: 20,
       head: [
@@ -303,7 +304,6 @@ export const handleSalesPdfDownload = async (req, res, next) => {
           "Order ID",
           "Customer Name",
           "Date",
-          // "Items",
           "Payment Method",
           "Price",
         ],
@@ -312,24 +312,43 @@ export const handleSalesPdfDownload = async (req, res, next) => {
         item._id,
         item.user.firstName,
         new Date(item.createdAt).toLocaleString(),
-        // item.totalQuantity,
         item.paymentDetails.method,
         item.totalAmount.toFixed(2),
       ]),
       styles: {
         fontSize: 10,
-        cellPadding: 2,
+        cellPadding: 3,
       },
-      tableWidth: "wrap",
+      tableWidth: "auto", // Ensures the table adjusts based on page width
       headStyles: {
         fontSize: 11,
         halign: "center",
+        fillColor: [41, 128, 185],
+        textColor: [255, 255, 255],
       },
       bodyStyles: {
         valign: "middle",
-        halign: "left",
+        halign: "center",
       },
-      margin: { left: 10 },
+      columnStyles: {
+        0: { halign: "left", cellWidth: 40 }, // Order ID
+        1: { halign: "left", cellWidth: 50 }, // Customer Name
+        2: { halign: "center", cellWidth: 50 }, // Date
+        3: { halign: "center", cellWidth: 30 }, // Payment Method
+        4: { halign: "right", cellWidth: 20 }, // Price
+      },
+      margin: { left: 10, right: 10 },
+      didDrawPage: (data) => {
+        const pageWidth = pdf.internal.pageSize.width;
+        const tableWidth = data.table.width;
+
+        if (tableWidth > pageWidth) {
+          pdf.autoTable({
+            ...data.settings,
+            tableWidth: pageWidth - 20, // Scale down table width to fit the page
+          });
+        }
+      },
     });
 
     const pdfData = pdf.output("arraybuffer");
@@ -342,10 +361,11 @@ export const handleSalesPdfDownload = async (req, res, next) => {
 
     res.send(Buffer.from(pdfData));
   } catch (error) {
-    console.error("Error whilet generationg sales report pdf:", error);
+    console.error("Error while generating sales report PDF:", error);
     next(error);
   }
 };
+
 
 export const handleDownloadSalesXl = async (req, res) => {
   try {
@@ -411,129 +431,4 @@ export const handleDownloadSalesXl = async (req, res) => {
   }
 };
 
-export const handleInvoiceDownload = async (req, res) => {
-  try {
-    console.log(req.params, "req.params");
-    console.log(req.query, "req.query");
-    const { orderId } = req.query;
 
-    const orderData = await Order.findById(orderId)
-      .populate("user")
-      .populate("items.product");
-
-    if (!orderData) {
-      return res.status(400).json({
-        success: false,
-        message: "order Data not found",
-      });
-    }
-
-    console.log(orderData, "====orderData");
-    const pdf = new jsPDF();
-
-    // Title
-    pdf.text("Invoice", 10, 10);
-
-    // Customer Details Section
-    pdf.setFontSize(12);
-    pdf.text(
-      `Customer Name: ${orderData.user.firstName} ${orderData.user.lastName}`,
-      10,
-      20
-    );
-    pdf.text(`Email: ${orderData.user.email}`, 10, 25);
-    pdf.text(`Phone: ${orderData.user.phone}`, 10, 30);
-
-    // Shipping Details Section
-    pdf.text("Shipping Address:", 10, 40);
-    pdf.text(`${orderData.shippingDetails.address}`, 10, 45);
-    pdf.text(
-      `${orderData.shippingDetails.city}, ${orderData.shippingDetails.district}`,
-      10,
-      50
-    );
-    pdf.text(
-      `${orderData.shippingDetails.state}, ${orderData.shippingDetails.pincode}`,
-      10,
-      55
-    );
-    pdf.text(`Address Name: ${orderData.shippingDetails.addressName}`, 10, 60);
-
-    // Order Details Section
-    pdf.text(`Order ID: ${orderData._id}`, 10, 70);
-    pdf.text(
-      `Invoice Date: ${new Date(orderData.createdAt).toLocaleDateString()}`,
-      10,
-      75
-    );
-
-    // Table for Items
-    const itemsTableData = orderData.items.map((item) => [
-      item.product ? item.product.productName : "Unknown Product",
-      item.size,
-      item.quantity,
-      item.price.toFixed(2),
-      (item.price * item.quantity).toFixed(2),
-    ]);
-
-    pdf.autoTable({
-      startY: 80,
-      head: [["Product", "Size", "Quantity", "Unit Price", "Total"]],
-      body: itemsTableData,
-      styles: {
-        fontSize: 10,
-        cellPadding: 2,
-      },
-      headStyles: {
-        fontSize: 11,
-        halign: "center",
-      },
-      bodyStyles: {
-        valign: "middle",
-        halign: "center",
-      },
-      margin: { left: 10 },
-    });
-
-    // Total Amount Section
-    pdf.text(
-      `Subtotal: $${orderData.totalAmount.toFixed(2)}`,
-      10,
-      pdf.lastAutoTable.finalY + 10
-    );
-    pdf.text(
-      `Discount: -$${orderData.discount.toFixed(2)}`,
-      10,
-      pdf.lastAutoTable.finalY + 15
-    );
-    pdf.text(
-      `Saved Amount: $${orderData.savedAmount.toFixed(2)}`,
-      10,
-      pdf.lastAutoTable.finalY + 20
-    );
-    pdf.text(
-      `Total Amount: $${orderData.finalTotalAfterDiscount.toFixed(2)}`,
-      10,
-      pdf.lastAutoTable.finalY + 25
-    );
-    pdf.text(
-      `Payment Method: ${orderData.paymentDetails.method}`,
-      10,
-      pdf.lastAutoTable.finalY + 30
-    );
-    pdf.text(
-      `Payment Status: ${orderData.paymentDetails.status}`,
-      10,
-      pdf.lastAutoTable.finalY + 35
-    );
-
-    // PDF generation and sending as response
-    const pdfData = pdf.output("arraybuffer");
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment; filename=Invoice.pdf");
-    res.send(Buffer.from(pdfData));
-  } catch (error) {
-    console.log(error, "error while invoice downloading");
-  }
-};

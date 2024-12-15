@@ -81,9 +81,12 @@ export const handleRemoveWishlist = async (req, res, next) => {
 
 export const handleFetchWishlist = async (req,res,next) => {
   const userId = req.id
+
+  console.log(userId,"user Id")
   try {
 
     const wishlist = await Wishlist.findOne({userId}).populate('products')
+    console.log(wishlist,"wishlisttt")
 
     if(!wishlist){
       return res.status(400).json({

@@ -14,6 +14,7 @@ import {
   handleFetchingCart,
   handleFetchSingleAddress,
   handleGetUserProfile,
+  handleInvoiceDownload,
   handleResetPassword,
   handleUpdateAddress,
   handleUpdateCartQuantity,
@@ -100,5 +101,6 @@ router
     .delete(handleRemoveWishlist) 
     .get(handleFetchWishlist); 
 
+router.get("/invoice",handleInvoiceDownload)
 
 export default router;

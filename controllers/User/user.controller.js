@@ -1,7 +1,10 @@
 import Address from "../../models/address.model.js";
 import Cart from "../../models/cart.model.js";
+import Order from "../../models/order.model.js";
 import Product from "../../models/product.model.js";
 import User from "../../models/user.model.js";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 
 export const handleGetUserProfile = async (req, res, next) => {
@@ -224,7 +227,6 @@ export const handleUpdateAddress = async (req, res, next) => {
     const { state, district, city, address, pincode, addressName, isDefault } =
       req.body;
 
-    //controller level validation or use library controller level validtion like joi or express validator
 
     const updatedAddress = await Address.findByIdAndUpdate(
       addressId,
@@ -281,9 +283,8 @@ export const handleDeleteAddress = async (req, res, next) => {
 export const handleAddToCart = async (req, res, next) => {
   const userId = req.id;
   const { productId, size, price, image, productName } = req.body;
-  const quantity = 1; // Default quantity set to 1
+  const quantity = 1; 
 
-  //add validatgion here
 
   try {
     let cart = await Cart.findOne({ userId });
@@ -330,6 +331,8 @@ export const handleAddToCart = async (req, res, next) => {
 export const handleFetchingCart = async (req, res, next) => {
   try {
     const userId = req.id;
+
+    console.log(userId,"user id while fetching cart")
 
     const cartData = await Cart.findOne({ userId }).populate({
       path: "items.productId",
@@ -500,5 +503,132 @@ export const handleUpdateCartQuantity = async (req, res, next) => {
   } catch (error) {
     console.log("error while updating the quantity");
     next(error);
+  }
+};
+
+export const handleInvoiceDownload = async (req, res) => {
+  try {
+    console.log(req.params, "req.params");
+    console.log(req.query, "req.query");
+    const { orderId } = req.query;
+
+    const orderData = await Order.findById(orderId)
+      .populate("user")
+      .populate("items.product");
+
+    if (!orderData) {
+      return res.status(400).json({
+        success: false,
+        message: "order Data not found",
+      });
+    }
+
+    console.log(orderData, "====orderData");
+    const pdf = new jsPDF();
+
+    
+    pdf.text("Invoice", 10, 10);
+
+    
+    pdf.setFontSize(12);
+    pdf.text(
+      `Customer Name: ${orderData.user.firstName} ${orderData.user.lastName}`,
+      10,
+      20
+    );
+    pdf.text(`Email: ${orderData.user.email}`, 10, 25);
+    pdf.text(`Phone: ${orderData.user.phone}`, 10, 30);
+
+    
+    pdf.text("Shipping Address:", 10, 40);
+    pdf.text(`${orderData.shippingDetails.address}`, 10, 45);
+    pdf.text(
+      `${orderData.shippingDetails.city}, ${orderData.shippingDetails.district}`,
+      10,
+      50
+    );
+    pdf.text(
+      `${orderData.shippingDetails.state}, ${orderData.shippingDetails.pincode}`,
+      10,
+      55
+    );
+    pdf.text(`Address Name: ${orderData.shippingDetails.addressName}`, 10, 60);
+
+    
+    pdf.text(`Order ID: ${orderData._id}`, 10, 70);
+    pdf.text(
+      `Invoice Date: ${new Date(orderData.createdAt).toLocaleDateString()}`,
+      10,
+      75
+    );
+
+
+    const itemsTableData = orderData.items.map((item) => [
+      item.product ? item.product.productName : "Unknown Product",
+      item.size,
+      item.quantity,
+      item.price.toFixed(2),
+      (item.price * item.quantity).toFixed(2),
+    ]);
+
+    pdf.autoTable({
+      startY: 80,
+      head: [["Product", "Size", "Quantity", "Unit Price", "Total"]],
+      body: itemsTableData,
+      styles: {
+        fontSize: 10,
+        cellPadding: 2,
+      },
+      headStyles: {
+        fontSize: 11,
+        halign: "center",
+      },
+      bodyStyles: {
+        valign: "middle",
+        halign: "center",
+      },
+      margin: { left: 10 },
+    });
+
+    
+    pdf.text(
+      `Subtotal: ₹${orderData.totalAmount.toFixed(2)}`,
+      10,
+      pdf.lastAutoTable.finalY + 10
+    );
+    pdf.text(
+      `Discount: -₹${orderData.discount.toFixed(2)}`,
+      10,
+      pdf.lastAutoTable.finalY + 15
+    );
+    pdf.text(
+      `Saved Amount: ₹${orderData.savedAmount.toFixed(2)}`,
+      10,
+      pdf.lastAutoTable.finalY + 20
+    );
+    pdf.text(
+      `Total Amount: ₹${orderData.finalTotalAfterDiscount.toFixed(2)}`,
+      10,
+      pdf.lastAutoTable.finalY + 25
+    );
+    pdf.text(
+      `Payment Method: ${orderData.paymentDetails.method}`,
+      10,
+      pdf.lastAutoTable.finalY + 30
+    );
+    pdf.text(
+      `Payment Status: ${orderData.paymentDetails.status}`,
+      10,
+      pdf.lastAutoTable.finalY + 35
+    );
+
+    
+    const pdfData = pdf.output("arraybuffer");
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "attachment; filename=Invoice.pdf");
+    res.send(Buffer.from(pdfData));
+  } catch (error) {
+    console.log(error, "error while invoice downloading");
   }
 };

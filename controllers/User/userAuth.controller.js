@@ -160,7 +160,7 @@ export const handleUserLogin = asyncHandler(async (req, res) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: true,
-    sameSite: "strict",
+    sameSite: "None", 
   });
 
   res.status(200).json({

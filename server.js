@@ -24,7 +24,8 @@ connectDB()
 const app = express()
 
 
-
+// "https://lifeloom-two.vercel.app"
+// "http://localhost:5173"
 // //middlewares
 app.use(cors({
     origin:"https://lifeloom-two.vercel.app", 

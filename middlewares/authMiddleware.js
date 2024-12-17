@@ -17,6 +17,8 @@ export const userAuth = (req, res,next) => {
     //extract token from that we get unique userid which can refer to db to get user information
     token = req.headers.authorization.split(" ")[1];
 
+    
+
     if (!token) {
       return res.status(401).json({ message: "unauthorized" });
     }
@@ -30,10 +32,15 @@ export const userAuth = (req, res,next) => {
             return res.status(401).json({ message: 'Account has been blocked' })
         }
     } catch (error) {
+      next(error)
     }
+
+
       if (err) {
+        console.log("inside token forbidden error")
         return res.status(403).json({ message: "Forbidden token expired" });
       } else if (decoded.role !== "user") {
+        console.log("inside role error why ? error")
         return res.status(401).json({ message: "Unauthorized" });
       }
 
@@ -65,6 +72,9 @@ export const adminAuth = (req, res, next) => {
     } else if (decoded.role !== "admin") {
       return res.status(401).json({ message: "Unauthorized" });
     }
+
+    console.log(decoded.id,"decoded id")
+    console.log(decoded.role,"decoded role")
     req.id = decoded.id;
     req.role = decoded?.role;
     next();

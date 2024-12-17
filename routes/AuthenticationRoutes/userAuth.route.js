@@ -26,11 +26,4 @@ router.post("/resendForgotOtp",handleForgotResendOtp)
 
 
 
-// router.post('/reset-password',handleUserResetPassword)
-// router.post('/send-otp',handleSendOtp)
-// router.post('/verify-otp',handleVerifyOtp)
-// router.post('/signup',signupValidationRules(),validate, handleUserSignup)
-
-
-
 export default router

@@ -113,7 +113,7 @@ export const handleUserSignup = asyncHandler(async (req, res, next) => {
     const mailOptions = {
       from: process.env.EMAIL_APP,
       to: TemporaryUser.email,
-      subject: "Leaf and Loom OTP",
+      subject: "Life and Loom OTP",
       text: `Hello ${firstName},your otp for signup on Leaf and Loom is ${otp}. This otp is valid for 15 minutes `,
     };
 
@@ -331,21 +331,21 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
     }
 
     //generate refreshToken
-    const userRefreshToken = generateRefreshToken(id);
+    const userRefreshToken = generateRefreshToken(id,"user");
     //generate accessToken
     res.cookie("refreshToken", userRefreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict",
+      sameSite: "None",
     });
 
-    const accessToken = generateAccessToken(id);
+    const accessToken = generateAccessToken(id,"user");
     return res.status(201).json({
       message: "user created successfully",
       _id: user._id,
-      name: user.firstName,
+      username: user.firstName,
       email: user.email,
-      role: user.role,
+      role: "user",
       accessToken,
     });
   }

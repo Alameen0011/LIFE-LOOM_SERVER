@@ -20,10 +20,6 @@ import {
   handleUpdateCartQuantity,
   handleUpdateUserProfile,
 } from "../controllers/User/user.controller.js";
-import {
-  addAddressValidationRules,
-  validate,
-} from "../middlewares/validationMiddleware.js";
 import { handleApplyCoupon, handleCancelOrder, handleFetchOrder, handleGetCoupon, handleGetSingleOrder, handlePlaceOrder, handleRetryOrderPayment, handleReturnRequest } from "../controllers/User/order.controller.js";
 import { handleFetchActiveCategory } from "../controllers/User/category.controller.js";
 import { handleAddToWishlist, handleFetchWishlist, handleRemoveWishlist } from "../controllers/User/wishlist.controller.js";
@@ -32,16 +28,7 @@ import { handleApplyRefferalCode, handleCheckRefferalstatus, handleFetchReferral
 
 const router = express.Router();
 
-/* basically this api helps to achieve basic user operation like user profile management
-    Acount managment, order management, wishlist , cart, product operation . */
 
-/*example routes under  /api/v1/user:
-      Account managment api's,
-      Order management api's,
-      product operation api's,
-      whishlist and cart api's
-
-    */
 router.get("/getProducts", handleGetProducts);
 router.get("/homeProducts",handleGetHomeProducts)
 router.get("/getProduct/:id", handleSingleProduct);
@@ -92,7 +79,7 @@ router.post("/refferal/skip",handleSkipRefferalOffer)
 router.get("/refferal/checkStatus",handleCheckRefferalstatus)
 
 
-//
+
 
 //wishlist api
 router
